@@ -20,8 +20,12 @@ logger = get_logger(__name__)
 # Try importing prompt_toolkit for better input handling
 try:
     from prompt_toolkit import PromptSession
-    from prompt_toolkit.formatted_text import HTML
+    from prompt_toolkit.styles import Style
     PROMPT_TOOLKIT_AVAILABLE = True
+    # Define style for prompt
+    PROMPT_STYLE = Style.from_dict({
+        "prompt": "cyan bold",
+    })
 except ImportError:
     PROMPT_TOOLKIT_AVAILABLE = False
 
@@ -146,9 +150,10 @@ def _process_message_stream(agent, message: str) -> None:
 
     rprint()  # New line after streaming
 
-    # Show formatted response with syntax highlighting
-    if full_response:
-        rprint("\n[dim]--- Formatted Response ---[/dim]")
+    # Show formatted response only if it contains code blocks
+    # (to avoid duplicate output for plain text responses)
+    if full_response and CODE_BLOCK_PATTERN.search(full_response):
+        rprint("\n[dim]--- Formatted Code Blocks ---[/dim]")
         _print_assistant_message(full_response)
 
 
@@ -239,7 +244,8 @@ def _interactive_loop(agent, stream: bool = False) -> None:
             # Use prompt_toolkit for better input handling (Chinese characters, etc.)
             if PROMPT_TOOLKIT_AVAILABLE:
                 user_input = session.prompt(
-                    HTML("<style fg='cyan' bold>You:</style> "),
+                    [("class:prompt", "You: ")],
+                    style=PROMPT_STYLE,
                     enable_suspend=True
                 ).strip()
             else:
