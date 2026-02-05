@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧧 AI代码助手 - 新年快乐！</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 50%, #FF4500 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 烟花效果 */
+        .firework {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: firework 3s ease-out infinite;
+        }
+
+        @keyframes firework {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* 灯笼装饰 */
+        .lantern {
+            position: fixed;
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(180deg, #FFD700 0%, #FF6347 100%);
+            border-radius: 30px 30px 15px 15px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            animation: swing 3s ease-in-out infinite;
+        }
+
+        .lantern::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 10px;
+            background: #8B0000;
+            border-radius: 5px;
+        }
+
+        .lantern::after {
+            content: '福';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 30px;
+            color: #8B0000;
+            font-weight: bold;
+        }
+
+        @keyframes swing {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #FFD700, 0 0 30px #FFD700; }
+            to { text-shadow: 0 0 30px #FFD700, 0 0 40px #FFD700, 0 0 50px #FFD700; }
+        }
+
+        .subtitle {
+            font-size: 1.5em;
+            color: #FFF;
+            margin-bottom: 30px;
+        }
+
+        .new-year-countdown {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 20px 40px;
+            border-radius: 20px;
+            display: inline-block;
+            border: 3px solid #FFD700;
+        }
+
+        .countdown-text {
+            font-size: 1.2em;
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        .countdown-timer {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #FFF;
+        }
+
+        /* 功能展示区域 */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 60px 0;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: #FFD700;
+            box-shadow: 0 20px 40px rgba(255, 215, 0, 0.4);
+        }
+
+        .feature-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.5em;
+            color: #8B0000;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .feature-desc {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        /* 代码演示区域 */
+        .demo-section {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 60px 0;
+            border: 3px solid #FFD700;
+        }
+
+        .demo-title {
+            color: #FFD700;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-left: 4px solid #FFD700;
+        }
+
+        .code-block pre {
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .function { color: #dcdcaa; }
+
+        .demo-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #FFD700 0%, #FF6347 100%);
+            color: #8B0000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .demo-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.6);
+        }
+
+        /* 对话演示 */
+        .chat-demo {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .chat-message {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: #FFE4B5;
+            margin-left: 20%;
+        }
+
+        .ai-message {
+            background: #E6E6FA;
+            margin-right: 20%;
+        }
+
+        /* 祝福语 */
+        .blessing {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            margin: 60px 0;
+            border: 3px solid #FFD700;
+        }
+
+        .blessing-text {
+            font-size: 2em;
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .blessing-sub {
+            font-size: 1.3em;
+            color: #FFF;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: #FFD700;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .features { grid-template-columns: 1fr; }
+            .countdown-timer { font-size: 1.8em; }
+        }
+
+        /* 红包掉落效果 */
+        .red-envelope {
+            position: fixed;
+            font-size: 30px;
+            animation: fall linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 灯笼装饰 -->
+    <div class="lantern" style="top: 20px; left: 5%;"></div>
+    <div class="lantern" style="top: 20px; right: 5%; animation-delay: 1s;"></div>
+
+    <div class="container">
+        <header>
+            <h1>🎊 新年快乐！🎊</h1>
+            <p class="subtitle">AI代码助手为您送上最诚挚的祝福</p>
+            <div class="new-year-countdown">
+                <div class="countdown-text">🧧 距离下一个春节还有 🧧</div>
+                <div class="countdown-timer" id="countdown"></div>
+            </div>
+        </header>
+
+        <!-- 功能展示 -->
+        <section class="features">
+            <div class="feature-card">
+                <span class="feature-icon">💻</span>
+                <h3 class="feature-title">代码编写</h3>
+                <p class="feature-desc">我可以帮您编写各种编程语言的代码，从简单的函数到复杂的项目架构，让编程变得轻松愉快！</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🔍</span>
+                <h3 class="feature-title">Bug调试</h3>
+                <p class="feature-desc">遇到代码问题不用慌！我能快速定位并修复bug，提供详细的解释和优化建议。</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📚</span>
+                <h3 class="feature-title">代码解释</h3>
+                <p class="feature-desc">不理解某段代码？我会用通俗易懂的方式为您解释，帮助您深入理解编程概念。</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3 class="feature-title">性能优化</h3>
+                <p class="feature-desc">让您的代码运行更快更高效！我会分析性能瓶颈并提供专业的优化方案。</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🔄</span>
+                <h3 class="feature-title">代码重构</h3>
+                <p class="feature-desc">改善代码结构，提高可维护性。我会帮您将代码变得更加优雅和专业。</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🧪</span>
+                <h3 class="feature-title">测试编写</h3>
+                <p class="feature-desc">编写单元测试、集成测试，确保代码质量。我会帮您构建完善的测试体系。</p>
+            </div>
+        </section>
+
+        <!-- 代码演示 -->
+        <section class="demo-section">
+            <h2 class="demo-title">💻 代码能力演示</h2>
+            <div class="code-block">
+                <pre><span class="comment">// 示例：用Python写一个新年祝福生成器</span>
+<span class="keyword">def</span> <span class="function">new_year_greeting</span>(name):
+    blessings = [
+        <span class="string">"新年快乐，万事如意！"</span>,
+        <span class="string">"恭喜发财，红包拿来！"</span>,
+        <span class="string">"心想事成，步步高升！"</span>,
+        <span class="string">"身体健康，阖家幸福！"</span>
+    ]
+    <span class="keyword">import</span> random
+    <span class="keyword">return</span> <span class="string">f"亲爱的{name}，{random.choice(blessings)}"</span>
+
+<span class="comment">// 调用示例</span>
+print(new_year_greeting(<span class="string">"开发者"</span>))
+<span class="comment">// 输出：亲爱的开发者，恭喜发财，红包拿来！</span></pre>
+            </div>
+            <div class="demo-buttons">
+                <button class="demo-btn" onclick="runCodeDemo()">▶️ 运行代码</button>
+                <button class="demo-btn" onclick="startChatDemo()">💬 开始对话演示</button>
+            </div>
+            <div class="chat-demo" id="chatDemo" style="display: none;">
+                <div class="chat-message user-message">
+                    帮我写一个Python函数，判断一个数字是否是质数
+                </div>
+            </div>
+        </section>
+
+        <!-- 新年祝福 -->
+        <section class="blessing">
+            <div class="blessing-text">🎉 恭喜发财，万事如意！🎉</div>
+            <div class="blessing-sub">
+                愿您在新的一年里<br>
+                代码无Bug，项目按时上线<br>
+                升职加薪，前程似锦！
+            </div>
+        </section>
+
+        <footer>
+            <p>🌟 AI代码助手 - 您的编程好伙伴 🌟</p>
+            <p>© 2024 新年特别版 | 祝您编程愉快！</p>
+        </footer>
+    </div>
+
+    <script>
+        // 倒计时功能
+        function updateCountdown() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            let nextCNY = new Date(currentYear, 0, 29); // 假设春节是1月29日
+            
+            if (now > nextCNY) {
+                nextCNY = new Date(currentYear + 1, 0, 29);
+            }
+            
+            const diff = nextCNY - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('countdown').innerHTML = 
+                `${days}天 ${hours}小时 ${minutes}分 ${seconds}秒`;
+        }
+        
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // 创建烟花
+        function createFirework() {
+            const colors = ['#FFD700', '#FF6347', '#FF4500', '#FFA500', '#FF1493'];
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = Math.random() * 100 + 'vw';
+            firework.style.background = colors[Math.floor(Math.random() * colors.length)];
+            firework.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            document.body.appendChild(firework);
+            
+            setTimeout(() => firework.remove(), 5000);
+        }
+        
+        setInterval(createFirework, 500);
+
+        // 创建红包掉落
+        function createRedEnvelope() {
+            const envelope = document.createElement('div');
+            envelope.className = 'red-envelope';
+            envelope.innerHTML = '🧧';
+            envelope.style.left = Math.random() * 100 + 'vw';
+            envelope.style.animationDuration = (Math.random() * 3 + 4) + 's';
+            document.body.appendChild(envelope);
+            
+            setTimeout(() => envelope.remove(), 7000);
+        }
+        
+        setInterval(createRedEnvelope, 2000);
+
+        // 代码演示
+        function runCodeDemo() {
+            const result = "亲爱的开发者，恭喜发财，红包拿来！🧧";
+            alert('代码运行结果：\n\n' + result);
+        }
+
+        // 对话演示
+        function startChatDemo() {
+            const chatDemo = document.getElementById('chatDemo');
+            chatDemo.style.display = 'block';
+            
+            const messages = [
+                { type: 'ai', text: '好的！这是一个判断质数的Python函数：' },
+                { type: 'code', text: 'def is_prime(n):\n    if n <= 1:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True' },
+                { type: 'ai', text: '这个函数的工作原理：\n1. 首先检查数字是否小于等于1\n2. 然后从2到√n遍历所有可能的因数\n3. 如果找到能整除的数，就不是质数\n4. 否则就是质数' },
+                { type: 'ai', text: '使用示例：\nis_prime(17) → True\nis_prime(15) → False' }
+            ];
+            
+            let index = 0;
+            const addMessage = () => {
+                if (index < messages.length) {
+                    const msg = messages[index];
+                    const div = document.createElement('div');
+                    div.className = 'chat-message ai-message';
+                    
+                    if (msg.type === 'code') {
+                        div.innerHTML = `<pre style="margin:0; background:#1e1e1e; padding:10px; border-radius:5px; color:#d4d4d4;">${msg.text}</pre>`;
+                    } else {
+                        div.textContent = msg.text;
+                    }
+                    
+                    chatDemo.appendChild(div);
+                    chatDemo.scrollTop = chatDemo.scrollHeight;
+                    index++;
+                    setTimeout(addMessage, 1500);
+                }
+            };
+            
+            setTimeout(addMessage, 500);
+        }
+    </script>
+</body>
+</html>

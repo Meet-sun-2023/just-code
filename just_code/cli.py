@@ -84,30 +84,49 @@ def _process_message_stream(agent, message: str) -> None:
     """Process a single message with streaming output."""
     rprint(f"\n[yellow]You:[/yellow] {message}")
 
-    rprint("\n[bold green]Agent:[/bold green] ", end="")
+    rprint("\n[bold green]just-code:[/bold green] ", end="")
     full_response = ""
+    response_started = False
 
     for chunk in stream_agent(agent, message):
         # Stream returns dict with various keys from middleware
-        # Look for the 'model' key which contains the AI response
-        if "model" in chunk and chunk["model"] is not None:
-            model_data = chunk["model"]
-            if "messages" in model_data:
-                for msg in model_data["messages"]:
-                    if hasattr(msg, "type") and msg.type == "ai":
-                        content = msg.content if hasattr(msg, "content") else ""
-                        if content:
-                            # Print new content only (incremental)
-                            new_content = content[len(full_response):]
-                            full_response = content
-                            console.print(new_content, end="")
+        # Deep Agents can return chunks with different structures
+        for key, value in chunk.items():
+            if value is None:
+                continue
+
+            # Handle messages in different formats
+            messages = None
+            if isinstance(value, dict) and "messages" in value:
+                messages = value["messages"]
+            elif isinstance(value, list):
+                messages = value
+
+            if messages:
+                for msg in messages:
+                    content = None
+
+                    # Extract content from different message types
+                    if hasattr(msg, "type"):
+                        if msg.type == "ai":
+                            content = getattr(msg, "content", None)
                     elif isinstance(msg, dict):
                         if msg.get("role") == "assistant" or msg.get("type") == "ai":
-                            content = msg.get("content", "")
-                            if content:
-                                new_content = content[len(full_response):]
+                            content = msg.get("content")
+
+                    # Stream the content
+                    if content:
+                        if isinstance(content, str) and content:
+                            if not response_started:
+                                response_started = True
+                            # Print new content only (incremental)
+                            new_content = content[len(full_response):]
+                            if new_content:
                                 full_response = content
-                                console.print(new_content, end="")
+                                # Use stdout.write for better streaming
+                                import sys
+                                sys.stdout.write(new_content)
+                                sys.stdout.flush()
 
     rprint()  # New line after streaming
 
@@ -150,10 +169,10 @@ def _print_assistant_message(content: str) -> None:
             if text_part.strip():
                 try:
                     md = Markdown(text_part)
-                    rprint("\n[bold green]Agent:[/bold green]")
+                    rprint("\n[bold green]just-code:[/bold green]")
                     rprint(md)
                 except:
-                    rprint(f"\n[bold green]Agent:[/bold green] {text_part}")
+                    rprint(f"\n[bold green]just-code:[/bold green] {text_part}")
 
         # Add code block with syntax highlighting
         lang = match.group(1) or "text"
@@ -167,20 +186,20 @@ def _print_assistant_message(content: str) -> None:
         if text_part.strip():
             try:
                 md = Markdown(text_part)
-                rprint("\n[bold green]Agent:[/bold green]")
+                rprint("\n[bold green]just-code:[/bold green]")
                 rprint(md)
             except:
-                rprint(f"\n[bold green]Agent:[/bold green] {text_part}")
+                rprint(f"\n[bold green]just-code:[/bold green] {text_part}")
 
     # Display code blocks with syntax highlighting
     for lang, code in parts:
         try:
             syntax = Syntax(code, lang, theme="monokai", line_numbers=True)
-            rprint("\n[bold green]Agent:[/bold green]")
+            rprint("\n[bold green]just-code:[/bold green]")
             rprint(syntax)
         except:
             # Fallback if language is not supported
-            rprint(f"\n[bold green]Agent:[/bold green] ```{lang}")
+            rprint(f"\n[bold green]just-code:[/bold green] ```{lang}")
             rprint(code)
             rprint("```")
 
@@ -193,10 +212,16 @@ def _interactive_loop(agent, stream: bool = False) -> None:
     rprint("[dim]Commands: /exit, /quit, /stream, /clear[/dim]\n")
 
     history = []
+    message_count = 0
 
     while True:
         try:
-            user_input = console.input("[bold cyan]You:[/bold cyan] ").strip()
+            # Use standard input() to avoid backspace issues with Rich console
+            try:
+                user_input = input("\033[36m\033[1mYou:\033[0m ").strip()
+            except (EOFError, KeyboardInterrupt):
+                rprint()
+                break
 
             if not user_input:
                 continue
@@ -212,8 +237,13 @@ def _interactive_loop(agent, stream: bool = False) -> None:
                 continue
             elif user_input.lower() == "/clear":
                 history = []
+                message_count = 0
                 rprint("\n[yellow]History cleared.[/yellow]")
                 continue
+
+            # Show message echo
+            message_count += 1
+            rprint(f"\n[yellow]Message #{message_count}:[/yellow] {user_input}")
 
             # Process message
             if stream:
