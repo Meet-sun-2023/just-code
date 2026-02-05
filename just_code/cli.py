@@ -88,24 +88,21 @@ def chat(prompt: str | None, model: str | None, debug: bool, stream: bool, no_me
 
 def _process_message(agent, message: str, thread_id: str | None = None) -> None:
     """Process a single message through the agent (non-streaming)."""
-    rprint(f"\n[yellow]You:[/yellow] {message}")
-
-    with console.status("[bold green]Thinking...", spinner="dots"):
+    with console.status("[bold cyan]▶ Thinking...", spinner="dots"):
         result = invoke_agent(agent, message, thread_id=thread_id)
 
     # Display response
+    rprint("\n[bold green]just-code:[/bold green]")
     _display_result(result)
 
 
 def _process_message_stream(agent, message: str, thread_id: str | None = None) -> None:
     """Process a single message with streaming output."""
-    rprint(f"\n[yellow]You:[/yellow] {message}")
-
     rprint("\n[bold green]just-code:[/bold green] ", end="")
     full_response = ""
     response_started = False
 
-    for chunk in stream_agent(agent, message):
+    for chunk in stream_agent(agent, message, thread_id=thread_id):
         # Stream returns dict with various keys from middleware
         # Deep Agents can return chunks with different structures
         for key, value in chunk.items():
@@ -231,15 +228,25 @@ def _print_assistant_message(content: str) -> None:
 
 def _interactive_loop(agent, stream: bool = False) -> None:
     """Run interactive chat loop."""
-    rprint("\n[green]Interactive mode started. Press Ctrl+C to exit.[/green]")
-    rprint("[dim]Conversation memory is enabled. Context is preserved across messages.[/dim]")
-    if stream:
-        rprint("[dim]Streaming is enabled. Use /stream to toggle.[/dim]")
-    rprint("[dim]Commands: /exit, /quit, /stream, /clear, /status[/dim]\n")
-
-    message_count = 0
     # Generate a unique thread ID for this conversation session
     thread_id = str(uuid.uuid4())
+    message_count = 0
+
+    # Show welcome message with session info
+    rprint("\n[bold cyan]╭─────────────────────────────────────────────────────────╮[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan] [bold green]Interactive Chat Mode[/bold green]                                    [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]                                                                   [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan] [dim]✓ Conversation memory enabled[/dim]                                 [bold cyan]│[/bold cyan]")
+    if stream:
+        rprint("[bold cyan]│[/bold cyan] [dim]✓ Streaming output enabled[/dim]                                   [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]                                                                   [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan] [dim]Commands:[/dim]                                                      [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]   [yellow]/exit[/yellow], [yellow]/quit[/yellow], [yellow]q[/yellow]    - Exit chat            [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]   [yellow]/stream[/yellow]                   - Toggle streaming     [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]   [yellow]/clear[/yellow]                    - New conversation     [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]│[/bold cyan]   [yellow]/status[/yellow]                   - Show session info    [bold cyan]│[/bold cyan]")
+    rprint("[bold cyan]╰─────────────────────────────────────────────────────────╯[/bold cyan]")
+    rprint()
 
     # Use prompt_toolkit for better Unicode handling if available
     if PROMPT_TOOLKIT_AVAILABLE:
@@ -267,28 +274,33 @@ def _interactive_loop(agent, stream: bool = False) -> None:
 
             # Handle commands
             if user_input.lower() in ("/exit", "/quit", "q"):
-                rprint("\n[yellow]Goodbye![/yellow]")
+                rprint("\n[yellow]╰─────────────────────────────────────────────────────────╯[/yellow]")
+                rprint("[yellow]Goodbye! Have a great coding session![/yellow]")
                 break
             elif user_input.lower() == "/stream":
                 stream = not stream
-                status = "ON" if stream else "OFF"
-                rprint(f"\n[yellow]Streaming toggled: {status}[/yellow]")
+                status = "[bold green]ON[/bold green]" if stream else "[dim]OFF[/dim]"
+                rprint(f"\n[blue]Streaming toggled:[/blue] {status}")
                 continue
             elif user_input.lower() == "/clear":
                 # Reset thread ID to start a fresh conversation
                 thread_id = str(uuid.uuid4())
                 message_count = 0
-                rprint("\n[yellow]Conversation cleared. Starting fresh session.[/yellow]")
+                rprint("\n[blue]╭─────────────────────────────────────────────────────────╮[/blue]")
+                rprint("[blue]│[/blue] [yellow]New conversation started[/yellow]                             [blue]│[/blue]")
+                rprint("[blue]╰─────────────────────────────────────────────────────────╯[/blue]")
                 continue
             elif user_input.lower() == "/status":
-                rprint(f"\n[dim]Session ID: {thread_id}[/dim]")
-                rprint(f"[dim]Messages: {message_count}[/dim]")
-                rprint(f"[dim]Streaming: {'ON' if stream else 'OFF'}[/dim]")
+                rprint("\n[dim]╭─────────────────────────────────────────────────────────╮[/dim]")
+                rprint(f"[dim]│[/dim] Session ID: [cyan]{thread_id[:8]}...[/cyan]" + " " * 40 + "[dim]│[/dim]")
+                rprint(f"[dim]│[/dim] Messages:   [cyan]{message_count}[/cyan]" + " " * 46 + "[dim]│[/dim]")
+                rprint(f"[dim]│[/dim] Streaming:  [cyan]{'ON' if stream else 'OFF'}[/cyan]" + " " * 45 + "[dim]│[/dim]")
+                rprint("[dim]╰─────────────────────────────────────────────────────────╯[/dim]")
                 continue
 
-            # Show message echo
+            # Show message echo with better formatting
             message_count += 1
-            rprint(f"\n[yellow]Message #{message_count}:[/yellow] {user_input}")
+            rprint(f"\n[dim]┌─ Message #{message_count} ──────────────────────────────────────[/dim]")
 
             # Process message with thread_id for memory continuity
             if stream:
@@ -296,8 +308,10 @@ def _interactive_loop(agent, stream: bool = False) -> None:
             else:
                 _process_message(agent, user_input, thread_id=thread_id)
 
+            rprint("[dim]└─────────────────────────────────────────────────────────────[/dim]")
+
         except KeyboardInterrupt:
-            rprint("\n\n[yellow]Use /exit or /quit to exit properly.[/yellow]")
+            rprint("\n\n[dim]Tip: Use [yellow]/exit[/yellow] or [yellow]/quit[/yellow] to exit properly.[/dim]")
         except EOFError:
             rprint("\n\n[yellow]Goodbye![/yellow]")
             break
