@@ -1,10 +1,12 @@
 """Coding agent implementation using LangChain Deep Agents."""
 
 import os
+import uuid
 from pathlib import Path
 from typing import Iterator
 
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.checkpoint.memory import MemorySaver
 
 from just_code.models import get_llm
 from just_code.utils import get_logger, load_config
@@ -22,10 +24,16 @@ except ImportError:
     logger.warning("deepagents not installed. Please run: pip install deepagents")
 
 
+# Global in-memory checkpointer for conversation history
+# In production, consider using a persistent checkpointer like PostgresSaver
+_checkpointer = MemorySaver()
+
+
 def create_coding_agent(
     model: str | None = None,
     system_prompt: str | None = None,
     debug: bool = False,
+    with_memory: bool = True,
 ) -> CompiledStateGraph:
     """Create a coding agent using Deep Agents.
 
@@ -40,6 +48,7 @@ def create_coding_agent(
         model: GLM model name (e.g., "glm-4.7", "glm-4.7-flashx")
         system_prompt: Optional custom system prompt
         debug: Enable debug mode
+        with_memory: Enable conversation memory using checkpointer
 
     Returns:
         Compiled deep agent ready for invocation
@@ -74,6 +83,7 @@ Best practices:
 3. Run commands to test changes
 4. Explain your reasoning clearly
 5. Ask for clarification when needed
+6. Remember context from previous messages in the conversation
 """
 
     # Get working directory from config or use current directory
@@ -87,6 +97,7 @@ Best practices:
         system_prompt=system_prompt,
         backend=lambda rt: FilesystemBackend(root_dir=work_dir, virtual_mode=True),
         tools=git_tools,
+        checkpointer=_checkpointer if with_memory else None,
         debug=debug,
     )
 
@@ -96,6 +107,7 @@ Best practices:
 def invoke_agent(
     agent: CompiledStateGraph,
     message: str,
+    thread_id: str | None = None,
     files: dict[str, str] | None = None,
 ) -> dict:
     """Invoke the coding agent with a message (non-streaming).
@@ -103,12 +115,21 @@ def invoke_agent(
     Args:
         agent: The compiled agent from create_coding_agent
         message: User message/input
+        thread_id: Conversation thread ID for memory continuity.
+                   If None, generates a new thread ID for each call.
         files: Optional files to provide context (path -> content mapping)
 
     Returns:
         Agent response with messages and intermediate steps
     """
-    agent_config = {"recursion_limit": 1000}
+    # Generate thread_id if not provided (for stateless conversations)
+    if thread_id is None:
+        thread_id = str(uuid.uuid4())
+
+    agent_config = {
+        "recursion_limit": 1000,
+        "configurable": {"thread_id": thread_id},
+    }
 
     # Prepare input
     inputs = {
@@ -128,6 +149,7 @@ def invoke_agent(
 def stream_agent(
     agent: CompiledStateGraph,
     message: str,
+    thread_id: str | None = None,
     files: dict[str, str] | None = None,
 ) -> Iterator[dict]:
     """Stream the coding agent response.
@@ -135,12 +157,21 @@ def stream_agent(
     Args:
         agent: The compiled agent from create_coding_agent
         message: User message/input
+        thread_id: Conversation thread ID for memory continuity.
+                   If None, generates a new thread ID for each call.
         files: Optional files to provide context (path -> content mapping)
 
     Yields:
         Streaming chunks from the agent (messages and updates)
     """
-    agent_config = {"recursion_limit": 1000}
+    # Generate thread_id if not provided (for stateless conversations)
+    if thread_id is None:
+        thread_id = str(uuid.uuid4())
+
+    agent_config = {
+        "recursion_limit": 1000,
+        "configurable": {"thread_id": thread_id},
+    }
 
     # Prepare input
     inputs = {

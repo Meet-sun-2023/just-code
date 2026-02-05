@@ -2,6 +2,7 @@
 
 import re
 import sys
+import uuid
 import click
 from rich.console import Console
 from rich.panel import Panel
@@ -45,32 +46,35 @@ def cli() -> None:
 @click.option("--model", "-m", help="Model to use (e.g., glm-4.7, glm-4.7-flashx)")
 @click.option("--debug", is_flag=True, help="Enable debug mode")
 @click.option("--stream", "-s", is_flag=True, help="Enable streaming output")
-def chat(prompt: str | None, model: str | None, debug: bool, stream: bool) -> None:
+@click.option("--no-memory", is_flag=True, help="Disable conversation memory (stateless mode)")
+def chat(prompt: str | None, model: str | None, debug: bool, stream: bool, no_memory: bool) -> None:
     """Start an interactive chat session or send a single prompt."""
     config = load_config()
     model_name = model or config.get("model", "glm-4.7")
+    with_memory = not no_memory
 
     rprint(Panel(
         "[bold cyan]Just Code[/bold cyan]\n"
         "Powered by GLM-4.7 & LangChain Deep Agents\n\n"
         f"Model: [blue]{model_name}[/blue]"
-        + (f" | [dim]Streaming: ON[/dim]" if stream else ""),
+        + (f" | [dim]Streaming: ON[/dim]" if stream else "")
+        + (f" | [dim]Memory: {'OFF' if no_memory else 'ON'}[/dim]"),
         title_align="center",
     ))
 
     try:
         # Create agent
         rprint("[dim]Initializing agent...[/dim]")
-        agent = create_coding_agent(model=model_name, debug=debug)
+        agent = create_coding_agent(model=model_name, debug=debug, with_memory=with_memory)
 
         if prompt:
-            # Single prompt mode
+            # Single prompt mode (stateless, no thread_id)
             if stream:
                 _process_message_stream(agent, prompt)
             else:
                 _process_message(agent, prompt)
         else:
-            # Interactive mode
+            # Interactive mode (with memory by default)
             _interactive_loop(agent, stream)
 
     except ImportError as e:
@@ -82,18 +86,18 @@ def chat(prompt: str | None, model: str | None, debug: bool, stream: bool) -> No
         logger.exception("Chat error")
 
 
-def _process_message(agent, message: str) -> None:
+def _process_message(agent, message: str, thread_id: str | None = None) -> None:
     """Process a single message through the agent (non-streaming)."""
     rprint(f"\n[yellow]You:[/yellow] {message}")
 
     with console.status("[bold green]Thinking...", spinner="dots"):
-        result = invoke_agent(agent, message)
+        result = invoke_agent(agent, message, thread_id=thread_id)
 
     # Display response
     _display_result(result)
 
 
-def _process_message_stream(agent, message: str) -> None:
+def _process_message_stream(agent, message: str, thread_id: str | None = None) -> None:
     """Process a single message with streaming output."""
     rprint(f"\n[yellow]You:[/yellow] {message}")
 
@@ -228,12 +232,14 @@ def _print_assistant_message(content: str) -> None:
 def _interactive_loop(agent, stream: bool = False) -> None:
     """Run interactive chat loop."""
     rprint("\n[green]Interactive mode started. Press Ctrl+C to exit.[/green]")
+    rprint("[dim]Conversation memory is enabled. Context is preserved across messages.[/dim]")
     if stream:
         rprint("[dim]Streaming is enabled. Use /stream to toggle.[/dim]")
-    rprint("[dim]Commands: /exit, /quit, /stream, /clear[/dim]\n")
+    rprint("[dim]Commands: /exit, /quit, /stream, /clear, /status[/dim]\n")
 
-    history = []
     message_count = 0
+    # Generate a unique thread ID for this conversation session
+    thread_id = str(uuid.uuid4())
 
     # Use prompt_toolkit for better Unicode handling if available
     if PROMPT_TOOLKIT_AVAILABLE:
@@ -269,27 +275,26 @@ def _interactive_loop(agent, stream: bool = False) -> None:
                 rprint(f"\n[yellow]Streaming toggled: {status}[/yellow]")
                 continue
             elif user_input.lower() == "/clear":
-                history = []
+                # Reset thread ID to start a fresh conversation
+                thread_id = str(uuid.uuid4())
                 message_count = 0
-                rprint("\n[yellow]History cleared.[/yellow]")
+                rprint("\n[yellow]Conversation cleared. Starting fresh session.[/yellow]")
+                continue
+            elif user_input.lower() == "/status":
+                rprint(f"\n[dim]Session ID: {thread_id}[/dim]")
+                rprint(f"[dim]Messages: {message_count}[/dim]")
+                rprint(f"[dim]Streaming: {'ON' if stream else 'OFF'}[/dim]")
                 continue
 
             # Show message echo
             message_count += 1
             rprint(f"\n[yellow]Message #{message_count}:[/yellow] {user_input}")
 
-            # Process message
+            # Process message with thread_id for memory continuity
             if stream:
-                _process_message_stream(agent, user_input)
+                _process_message_stream(agent, user_input, thread_id=thread_id)
             else:
-                _process_message(agent, user_input)
-
-            # Note: In streaming mode, we don't save to history as the full response
-            # would need to be accumulated. For non-streaming, we can save:
-            if not stream:
-                # This is a simplified history - real implementation would need
-                # to handle message accumulation properly
-                pass
+                _process_message(agent, user_input, thread_id=thread_id)
 
         except KeyboardInterrupt:
             rprint("\n\n[yellow]Use /exit or /quit to exit properly.[/yellow]")
