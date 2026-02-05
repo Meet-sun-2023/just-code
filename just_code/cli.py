@@ -1,6 +1,7 @@
 """Just Code CLI - Main entry point."""
 
 import re
+import sys
 import click
 from rich.console import Console
 from rich.panel import Panel
@@ -15,6 +16,14 @@ from just_code.agents import create_coding_agent, invoke_agent, stream_agent
 
 console = Console()
 logger = get_logger(__name__)
+
+# Try importing prompt_toolkit for better input handling
+try:
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.formatted_text import HTML
+    PROMPT_TOOLKIT_AVAILABLE = True
+except ImportError:
+    PROMPT_TOOLKIT_AVAILABLE = False
 
 # Code block patterns for syntax highlighting
 CODE_BLOCK_PATTERN = re.compile(r'```(\w*)\n(.*?)```', re.DOTALL)
@@ -101,8 +110,15 @@ def _process_message_stream(agent, message: str) -> None:
                 messages = value["messages"]
             elif isinstance(value, list):
                 messages = value
+            # Handle Overwrite object from Deep Agents
+            elif hasattr(value, "value"):
+                messages = value.value
 
             if messages:
+                # Ensure messages is a list
+                if not isinstance(messages, list):
+                    continue
+
                 for msg in messages:
                     content = None
 
@@ -214,14 +230,25 @@ def _interactive_loop(agent, stream: bool = False) -> None:
     history = []
     message_count = 0
 
+    # Use prompt_toolkit for better Unicode handling if available
+    if PROMPT_TOOLKIT_AVAILABLE:
+        session = PromptSession()
+
     while True:
         try:
-            # Use standard input() to avoid backspace issues with Rich console
-            try:
-                user_input = input("\033[36m\033[1mYou:\033[0m ").strip()
-            except (EOFError, KeyboardInterrupt):
-                rprint()
-                break
+            # Use prompt_toolkit for better input handling (Chinese characters, etc.)
+            if PROMPT_TOOLKIT_AVAILABLE:
+                user_input = session.prompt(
+                    HTML("<style fg='cyan' bold>You:</style> "),
+                    enable_suspend=True
+                ).strip()
+            else:
+                # Fallback to standard input()
+                try:
+                    user_input = input("\033[36m\033[1mYou:\033[0m ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    rprint()
+                    break
 
             if not user_input:
                 continue
